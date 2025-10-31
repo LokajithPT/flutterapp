@@ -1,0 +1,15 @@
+landing page -> logo diplay (1 sec ) -> option menu (5 menu ) these items are EDEN 1 ... 5 -> when one is touched three button need to be displayed -> dates , pictures , kitchen -> 
+
+
+dates button -> monthly calender ::: if a date is clicked an input form with 3 feilds appear (name , contact , checkin checkout date ) -> done button -> after the done button the button needs to turn grey 
+
+pictures button -> gallery of pictures ( 10 pictures ) -> when a picture is clicked it opens in full screen -> back button to return to gallery -> also a share button to send the picture via whatsapp as pictures (organised )
+
+kitchen -> 3 buttons (dinner , breakfast , lunch ) - when one is clicked we can add food items there and it has to stay there until cleared -> clear button to clear all food items added -> done button to exit to previous menu 
+
+the kitchen needs to just be a notepad like thing to just take orders and store there ... 
+
+all the EDEN1..5 do not share the same data ... each one has its own data storage for dates , pictures and kitchen orders ... 
+
+// Note: This is a high-level pseudocode representation of the described functionality.
+
