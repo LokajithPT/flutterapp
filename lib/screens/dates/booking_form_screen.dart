@@ -22,6 +22,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   DateTime? _checkoutDate;
 
   bool get _isViewing => widget.booking != null;
+  bool _isEditing = false;
 
   @override
   void initState() {
@@ -47,7 +48,32 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isViewing ? 'View Booking' : 'New Booking'),
+        title: Text(_isEditing ? 'Edit Booking' : (_isViewing ? 'View Booking' : 'New Booking')),
+        actions: [
+          if (_isViewing && !_isEditing)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: () {
+                setState(() {
+                  _isEditing = true;
+                });
+              },
+            ),
+          if (_isEditing)
+            IconButton(
+              icon: const Icon(Icons.close),
+              onPressed: () {
+                setState(() {
+                  _isEditing = false;
+                  // Reset values to original booking
+                  _nameController.text = widget.booking!.name;
+                  _contactController.text = widget.booking!.contact;
+                  _checkinDate = DateTime.parse(widget.booking!.checkin);
+                  _checkoutDate = DateTime.parse(widget.booking!.checkout);
+                });
+              },
+            ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -57,7 +83,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
             children: [
               TextFormField(
                 controller: _nameController,
-                readOnly: _isViewing,
+                readOnly: _isViewing && !_isEditing,
                 decoration: const InputDecoration(labelText: 'Name'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -68,7 +94,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               ),
               TextFormField(
                 controller: _contactController,
-                readOnly: _isViewing,
+                readOnly: _isViewing && !_isEditing,
                 decoration: const InputDecoration(labelText: 'Contact'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -87,7 +113,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.calendar_today),
-                    onPressed: _isViewing
+                    onPressed: (_isViewing && !_isEditing)
                         ? null
                         : () async {
                             final picked = await showDatePicker(
@@ -114,7 +140,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.calendar_today),
-                    onPressed: _isViewing
+                    onPressed: (_isViewing && !_isEditing)
                         ? null
                         : () async {
                             final picked = await showDatePicker(
@@ -135,7 +161,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
               const SizedBox(height: 20),
               ElevatedButton(
                 onPressed: () {
-                  if (_isViewing) {
+                  if (_isViewing && !_isEditing) {
                     Navigator.pop(context);
                     return;
                   }
@@ -147,6 +173,18 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                       checkin: DateFormat('yyyy-MM-dd').format(_checkinDate!),
                       checkout: DateFormat('yyyy-MM-dd').format(_checkoutDate!),
                     );
+
+                    if (_isEditing) {
+                      // Update existing booking - remove old dates first
+                      final oldBooking = widget.booking!;
+                      for (var d = DateTime.parse(oldBooking.checkin);
+                          d.isBefore(DateTime.parse(oldBooking.checkout));
+                          d = d.add(const Duration(days: 1))) {
+                        final dateKey = DateFormat('yyyy-MM-dd').format(d);
+                        Provider.of<EdenDataProvider>(context, listen: false)
+                            .removeBooking(dateKey);
+                      }
+                    }
 
                     // Add booking for all dates in the range
                     for (var d = _checkinDate!;
@@ -160,7 +198,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
                     Navigator.pop(context);
                   }
                 },
-                child: Text(_isViewing ? 'Close' : 'Done'),
+                child: Text(_isEditing ? 'Update' : (_isViewing ? 'Close' : 'Done')),
               ),
             ],
           ),
