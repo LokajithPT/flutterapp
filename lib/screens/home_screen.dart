@@ -16,7 +16,7 @@ class HomeScreen extends StatelessWidget {
     {'title': 'EDEN 4', 'id': 4, 'hasKitchen': true},
     {'title': 'EDEN 6', 'id': 6, 'hasKitchen': true},
     {'title': 'EDEN 7', 'id': 7, 'hasKitchen': true},
-    {'title': 'Koonoor', 'id': 8, 'hasKitchen': false},
+    {'title': 'Coonoor', 'id': 8, 'hasKitchen': false},
     {'title': 'Kodanadu', 'id': 9, 'hasKitchen': false},
     {'title': 'Others', 'id': 10, 'hasKitchen': false},
   ];
@@ -86,12 +86,6 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        mini: true,
-        onPressed: () => _openImages(context),
-        backgroundColor: Colors.purple[600],
-        child: const Icon(Icons.photo_library, color: Colors.white, size: 20),
       ),
     );
   }
@@ -370,10 +364,5 @@ class HomeScreen extends StatelessWidget {
     ];
   }
 
-  void _openImages(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SimpleImagesScreen()),
-    );
-  }
+
 }

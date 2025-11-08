@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/eden_data_provider.dart';
+import '../simple_images_screen.dart';
 
 class KitchenScreen extends StatefulWidget {
   const KitchenScreen({super.key});
@@ -18,6 +20,30 @@ class _KitchenScreenState extends State<KitchenScreen> {
     'Dinner': TextEditingController(),
     'Snacks': TextEditingController(),
   };
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSelectedDate();
+  }
+
+  Future<void> _loadSelectedDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedDate = prefs.getString('kitchen_selected_date');
+    if (savedDate != null) {
+      setState(() {
+        selectedDate = DateTime.parse(savedDate);
+      });
+      _loadNotesForDate();
+    }
+  }
+
+  Future<void> _saveSelectedDate() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (selectedDate != null) {
+      await prefs.setString('kitchen_selected_date', DateFormat('yyyy-MM-dd').format(selectedDate!));
+    }
+  }
 
   @override
   void dispose() {
@@ -38,6 +64,7 @@ class _KitchenScreenState extends State<KitchenScreen> {
       setState(() {
         selectedDate = picked;
       });
+      await _saveSelectedDate();
       _loadNotesForDate();
     }
   }
@@ -98,6 +125,13 @@ class _KitchenScreenState extends State<KitchenScreen> {
           },
         ),
       ),
+    );
+  }
+
+  void _openImages(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SimpleImagesScreen()),
     );
   }
 
@@ -187,11 +221,29 @@ class _KitchenScreenState extends State<KitchenScreen> {
         ),
       ),
       floatingActionButton: selectedDate != null
-          ? FloatingActionButton.extended(
-              onPressed: _saveNotes,
-              backgroundColor: Colors.green[600],
-              icon: const Icon(Icons.save, color: Colors.white),
-              label: const Text('Save All', style: TextStyle(color: Colors.white)),
+          ? Stack(
+              children: [
+                Positioned(
+                  bottom: 20,
+                  right: 20,
+                  child: FloatingActionButton.extended(
+                    onPressed: _saveNotes,
+                    backgroundColor: Colors.green[600],
+                    icon: const Icon(Icons.save, color: Colors.white),
+                    label: const Text('Save All', style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+                Positioned(
+                  bottom: 20,
+                  left: 20,
+                  child: FloatingActionButton(
+                    mini: true,
+                    onPressed: () => _openImages(context),
+                    backgroundColor: Colors.purple[600],
+                    child: const Icon(Icons.photo_library, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
             )
           : null,
     );

@@ -42,7 +42,7 @@ class EdenHomeScreen extends StatelessWidget {
                 () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const DatesScreen()),
+                    MaterialPageRoute(builder: (context) => DatesScreen(edenId: edenId)),
                   );
                 },
               ),

@@ -50,7 +50,7 @@ class StorageService {
       case 7:
         return 'eden$edenId';
       case 8:
-        return 'koonoor';
+        return 'coonoor';
       case 9:
         return 'kodanadu';
       case 10:

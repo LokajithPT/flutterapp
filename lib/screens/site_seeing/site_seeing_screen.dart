@@ -4,6 +4,8 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 
 class SiteSeeingScreen extends StatefulWidget {
   const SiteSeeingScreen({super.key});
@@ -25,8 +27,47 @@ class _SiteSeeingScreenState extends State<SiteSeeingScreen> {
   }
 
   Future<void> _loadExistingImages() async {
-    // Load existing images from storage if needed
-    // For now, we'll start with empty list
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${directory.path}/site_seeing_images');
+      
+      if (await imagesDir.exists()) {
+        final files = await imagesDir.list().where((entity) => 
+          entity is File && 
+          (entity.path.endsWith('.jpg') || entity.path.endsWith('.png') || entity.path.endsWith('.jpeg'))
+        ).cast<File>().toList();
+        
+        files.sort((a, b) => a.path.compareTo(b.path));
+        
+        if (mounted) {
+          setState(() {
+            _images.clear();
+            _images.addAll(files);
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading images: $e');
+    }
+  }
+
+  Future<File> _saveImageToAppDirectory(File sourceFile) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${directory.path}/site_seeing_images');
+      
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+      
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}${path.extension(sourceFile.path)}';
+      final savedFile = await sourceFile.copy('${imagesDir.path}/$fileName');
+      
+      return savedFile;
+    } catch (e) {
+      print('Error saving image: $e');
+      rethrow;
+    }
   }
 
   Future<void> _requestPermissions() async {
@@ -46,27 +87,32 @@ class _SiteSeeingScreenState extends State<SiteSeeingScreen> {
     );
 
     if (image != null) {
-      print('Image selected: ${image.path}');
-      final file = File(image.path);
-      print('File exists: ${await file.exists()}');
-      print('File length: ${await file.length()} bytes');
-      
-      setState(() {
-        _images.add(file);
-        print('Total images: ${_images.length}');
-      });
-      
-      // Show success message
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Image added! Total: ${_images.length}'),
-            backgroundColor: Colors.green,
-          ),
-        );
+      try {
+        final savedFile = await _saveImageToAppDirectory(File(image.path));
+        
+        setState(() {
+          _images.add(savedFile);
+        });
+        
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Image added! Total: ${_images.length}'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving image: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
-    } else {
-      print('No image selected');
     }
   }
 
@@ -104,19 +150,30 @@ class _SiteSeeingScreenState extends State<SiteSeeingScreen> {
     }
   }
 
-  void _deleteSelectedImages() {
-    setState(() {
-      final List<File> remainingImages = [];
-      for (int i = 0; i < _images.length; i++) {
-        if (!_selectedImages.contains(i)) {
-          remainingImages.add(_images[i]);
+  void _deleteSelectedImages() async {
+    try {
+      // Delete the actual files
+      for (final index in _selectedImages) {
+        if (index >= 0 && index < _images.length) {
+          await _images[index].delete();
         }
       }
-      _images.clear();
-      _images.addAll(remainingImages);
-      _selectedImages.clear();
-      _isSelectionMode = false;
-    });
+      
+      setState(() {
+        final List<File> remainingImages = [];
+        for (int i = 0; i < _images.length; i++) {
+          if (!_selectedImages.contains(i)) {
+            remainingImages.add(_images[i]);
+          }
+        }
+        _images.clear();
+        _images.addAll(remainingImages);
+        _selectedImages.clear();
+        _isSelectionMode = false;
+      });
+    } catch (e) {
+      print('Error deleting images: $e');
+    }
   }
 
   @override

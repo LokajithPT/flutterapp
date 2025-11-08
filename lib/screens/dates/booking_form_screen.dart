@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/booking_model.dart';
 import '../../providers/eden_data_provider.dart';
 
@@ -28,6 +29,7 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
   void initState() {
     super.initState();
     _checkinDate = widget.date;
+    _loadFormData();
 
     if (_isViewing) {
       _nameController.text = widget.booking!.name;
@@ -37,8 +39,28 @@ class _BookingFormScreenState extends State<BookingFormScreen> {
     }
   }
 
+  Future<void> _loadFormData() async {
+    if (!_isViewing) {
+      final prefs = await SharedPreferences.getInstance();
+      final savedName = prefs.getString('booking_form_name');
+      final savedContact = prefs.getString('booking_form_contact');
+      
+      if (savedName != null) _nameController.text = savedName;
+      if (savedContact != null) _contactController.text = savedContact;
+    }
+  }
+
+  Future<void> _saveFormData() async {
+    if (!_isViewing) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('booking_form_name', _nameController.text);
+      await prefs.setString('booking_form_contact', _contactController.text);
+    }
+  }
+
   @override
   void dispose() {
+    _saveFormData();
     _nameController.dispose();
     _contactController.dispose();
     super.dispose();

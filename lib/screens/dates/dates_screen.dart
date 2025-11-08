@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../models/booking_model.dart';
 import '../../providers/eden_data_provider.dart';
 import 'booking_form_screen.dart';
 
 class DatesScreen extends StatefulWidget {
-  const DatesScreen({super.key});
+  final int edenId;
+  
+  const DatesScreen({super.key, required this.edenId});
 
   @override
   State<DatesScreen> createState() => _DatesScreenState();
@@ -18,6 +21,47 @@ class _DatesScreenState extends State<DatesScreen> {
   CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCalendarSettings();
+    // Load data when screen initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<EdenDataProvider>(context, listen: false).loadData(widget.edenId);
+    });
+  }
+
+  Future<void> _loadCalendarSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedFormat = prefs.getString('calendar_format');
+    final savedFocusedDay = prefs.getString('calendar_focused_day');
+    final savedSelectedDay = prefs.getString('calendar_selected_day');
+    
+    setState(() {
+      if (savedFormat != null) {
+        _calendarFormat = CalendarFormat.values.firstWhere(
+          (format) => format.name == savedFormat,
+          orElse: () => CalendarFormat.month,
+        );
+      }
+      if (savedFocusedDay != null) {
+        _focusedDay = DateTime.parse(savedFocusedDay);
+      }
+      if (savedSelectedDay != null) {
+        _selectedDay = DateTime.parse(savedSelectedDay);
+      }
+    });
+  }
+
+  Future<void> _saveCalendarSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('calendar_format', _calendarFormat.name);
+    await prefs.setString('calendar_focused_day', DateFormat('yyyy-MM-dd').format(_focusedDay));
+    if (_selectedDay != null) {
+      await prefs.setString('calendar_selected_day', DateFormat('yyyy-MM-dd').format(_selectedDay!));
+    }
+  }
 
   // Get all unique bookings from the dates
   Map<String, Booking> _getUniqueBookings(Map<String, Booking> dates) {
@@ -63,7 +107,7 @@ class _DatesScreenState extends State<DatesScreen> {
             selectedDayPredicate: (day) {
               return isSameDay(_selectedDay, day);
             },
-            onDaySelected: (selectedDay, focusedDay) {
+            onDaySelected: (selectedDay, focusedDay) async {
               final dateKey = DateFormat('yyyy-MM-dd').format(selectedDay);
               final booking = provider.edenData!.dates[dateKey];
 
@@ -71,6 +115,7 @@ class _DatesScreenState extends State<DatesScreen> {
                 _selectedDay = selectedDay;
                 _focusedDay = focusedDay;
               });
+              await _saveCalendarSettings();
 
               if (booking != null) {
                 Navigator.push(
@@ -93,15 +138,17 @@ class _DatesScreenState extends State<DatesScreen> {
                 );
               }
             },
-            onFormatChanged: (format) {
+            onFormatChanged: (format) async {
               if (_calendarFormat != format) {
                 setState(() {
                   _calendarFormat = format;
                 });
+                await _saveCalendarSettings();
               }
             },
-            onPageChanged: (focusedDay) {
+            onPageChanged: (focusedDay) async {
               _focusedDay = focusedDay;
+              await _saveCalendarSettings();
             },
             calendarBuilders: CalendarBuilders(
               defaultBuilder: (context, day, focusedDay) {

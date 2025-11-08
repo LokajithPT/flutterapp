@@ -5,6 +5,9 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import 'room_fullscreen_screen.dart';
 
 class RoomsScreen extends StatefulWidget {
@@ -29,8 +32,47 @@ class _RoomsScreenState extends State<RoomsScreen> {
   }
 
   Future<void> _loadExistingImages() async {
-    // Load existing images from storage if needed
-    // For now, we'll start with empty list
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${directory.path}/eden${widget.edenId}_rooms');
+      
+      if (await imagesDir.exists()) {
+        final files = await imagesDir.list().where((entity) => 
+          entity is File && 
+          (entity.path.endsWith('.jpg') || entity.path.endsWith('.png') || entity.path.endsWith('.jpeg'))
+        ).cast<File>().toList();
+        
+        files.sort((a, b) => a.path.compareTo(b.path));
+        
+        if (mounted) {
+          setState(() {
+            _images.clear();
+            _images.addAll(files);
+          });
+        }
+      }
+    } catch (e) {
+      print('Error loading images: $e');
+    }
+  }
+
+  Future<File> _saveImageToAppDirectory(File sourceFile) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final imagesDir = Directory('${directory.path}/eden${widget.edenId}_rooms');
+      
+      if (!await imagesDir.exists()) {
+        await imagesDir.create(recursive: true);
+      }
+      
+      final fileName = '${DateTime.now().millisecondsSinceEpoch}${path.extension(sourceFile.path)}';
+      final savedFile = await sourceFile.copy('${imagesDir.path}/$fileName');
+      
+      return savedFile;
+    } catch (e) {
+      print('Error saving image: $e');
+      rethrow;
+    }
   }
 
   Future<void> _requestPermissions() async {
@@ -50,9 +92,21 @@ class _RoomsScreenState extends State<RoomsScreen> {
     );
 
     if (image != null) {
-      setState(() {
-        _images.add(File(image.path));
-      });
+      try {
+        final savedFile = await _saveImageToAppDirectory(File(image.path));
+        setState(() {
+          _images.add(savedFile);
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving image: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
     }
   }
 
